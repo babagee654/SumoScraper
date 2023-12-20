@@ -80,11 +80,11 @@ async function scrapeBanzukeByDivision(page: Page, basho: Basho) {
         let division = divisions[i];
         await scrapeDivisionTable(await locator.nth(i), division, wrestlerList);
         console.log(`Found ${wrestlerList.length} Wrestlers! Saving to file...`);
-        fs.writeFile(`./temp/${basho.bashoName}-${division}.txt`, "", (err) => {
+        fs.writeFile(`./.temp/${basho.bashoName}-${division}.txt`, "", (err) => {
             if (err) console.log(err);
         });
         for (let wrestler of wrestlerList) {
-            fs.appendFile(`./temp/${basho.bashoName}-${division}.txt`, `${wrestler.toString()}\n`, (err) => {
+            fs.appendFile(`./.temp/${basho.bashoName}-${division}.txt`, `${wrestler.toString()}\n`, (err) => {
                 if (err) console.log(err);
             });
         }
@@ -222,7 +222,7 @@ async function scrapeBashoDetails(page: Page, basho: Basho) {
         console.log("Getting Basho Details... 👹");
         let basho: Basho = new Basho();
         await scrapeBashoDetails(page, basho);
-        fs.writeFile(`./temp/${basho.bashoName}.txt`, basho.toString(), (err) => {
+        fs.writeFile(`./.temp/${basho.bashoName}.txt`, basho.toString(), (err) => {
             if (err) console.log(err);
         });
 
