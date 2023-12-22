@@ -2,9 +2,9 @@
     "name": "playwright_practice",
     "version": "1.0.0",
     "description": "",
-    "main": "index.js",
+    "main": "index.ts",
     "scripts": {
-        "start": "ts-node src/SumoScraper.ts"
+        "start": "ts-node src/index.ts"
     },
     "keywords": [],
     "author": "",

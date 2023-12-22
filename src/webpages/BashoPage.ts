@@ -1,56 +1,23 @@
 import { Locator, Page, chromium } from "playwright";
 import * as fs from "fs";
+import * as path from "path";
+import Basho from "../models/Basho";
+import Wrestler from "../models/Wrestler";
+import Divisions from "../constants/Divisions";
 
-/*
-    Goes to latest banzuke, data and save into file, collect list of wrestler urls
-*/
-const divisions: string[] = ["Makuuchi", "Juryo"];
+const DivisionCount = Divisions.length;
 
-enum Ranks {
-    Y = "Yokozuna",
-    O = "Ozeki",
-    S = "Sekiwake",
-    K = "Komusubi",
-    M = "Makuuchi",
-    J = "Juryo",
-}
+//#region Helper Functions
+function cleanup(directoryPath: string) {
+    fs.readdir(directoryPath, (err, files) => {
+        if (err) throw err;
 
-class Wrestler {
-    wrestler_id?: number;
-    name?: string;
-    nationality?: string;
-    height?: number;
-    weight?: number;
-    heya?: string;
-    age?: number;
-    highest_rank?: string;
-    current_rank?: string;
-    current_division?: string;
-    debut?: Date;
-    career_wins?: number;
-    career_losses?: number;
-    current_basho_record?: string;
-
-    constructor() {}
-
-    public toString = (): string => {
-        return `${this.wrestler_id}, ${this.name}, ${this.current_rank}, ${this.current_basho_record}`;
-    };
-}
-
-class Basho {
-    bashoId?: number | undefined;
-    bashoName?: string | undefined;
-    venue?: string | undefined;
-    startDate?: Date | undefined;
-    endDate?: Date | undefined;
-    city?: string | undefined;
-
-    constructor() {}
-
-    public toString = (): string => {
-        return `${this.bashoId}, ${this.bashoName}, ${this.venue}, ${this.startDate?.toDateString()}, ${this.endDate?.toDateString()}, ${this.city}\n`;
-    };
+        for (const file of files) {
+            fs.unlink(path.join(directoryPath, file), (err) => {
+                if (err) throw err;
+            });
+        }
+    });
 }
 
 function parseWrestlerIdFromUrl(url: string) {
@@ -58,7 +25,7 @@ function parseWrestlerIdFromUrl(url: string) {
     if (!rQueryIndex) {
         throw new Error(`Unable to parse for WrestlerId from URL, ${url}`);
     }
-    let wrestlerId = url.slice(rQueryIndex + 2);
+    const wrestlerId = url.slice(rQueryIndex + 2);
     return wrestlerId;
 }
 function parseBashoIdFromUrl(url: string) {
@@ -66,34 +33,35 @@ function parseBashoIdFromUrl(url: string) {
     if (!bQueryIndex) {
         throw new Error(`Unable to parse for BashoId from URL, ${url}`);
     }
-    let bashoId = url.slice(bQueryIndex + 2);
+    const bashoId = url.slice(bQueryIndex + 2);
     return bashoId;
 }
+//#endregion
 
-async function scrapeBanzukeByDivision(page: Page, basho: Basho) {
-    let locator = await page.locator(".banzuke");
-    if ((await locator.count()) <= 0) {
-        throw new Error("Unable to locate '.banzuke'");
-    }
-    for (let i = 0; i < 2; i++) {
-        let wrestlerList: Wrestler[] = [];
-        let division = divisions[i];
-        await scrapeDivisionTable(await locator.nth(i), division, wrestlerList);
-        console.log(`Found ${wrestlerList.length} Wrestlers! Saving to file...`);
-        fs.writeFile(`./.temp/${basho.bashoName}-${division}.txt`, "", (err) => {
-            if (err) console.log(err);
-        });
-        for (let wrestler of wrestlerList) {
-            fs.appendFile(`./.temp/${basho.bashoName}-${division}.txt`, `${wrestler.toString()}\n`, (err) => {
-                if (err) console.log(err);
-            });
+//#region Scraper Functions
+async function scrapeBanzukeByDivision(page: Page) {
+    try {
+        let locator = await page.locator(".banzuke");
+        if ((await locator.count()) <= 0) {
+            throw new Error("Unable to locate '.banzuke'");
         }
+        const divisionsList: Wrestler[][] = [];
+        for (let i = 0; i < DivisionCount; i++) {
+            const division = Divisions[i];
+            const wrestlerList: Wrestler[] = await scrapeDivisionTable(await locator.nth(i), division);
+            console.log(`Found ${wrestlerList.length} wrestlers in ${division} division!`);
+            divisionsList.push(wrestlerList);
+        }
+        return divisionsList;
+    } catch (error) {
+        throw new Error(`Error scraping division tables! ${error}`);
     }
 }
 
-async function scrapeDivisionTable(locator: Locator, division: string, wrestlersArray: Wrestler[]) {
+async function scrapeDivisionTable(locator: Locator, division: string) {
     console.log(`\n--------Scraping ${division} Table--------\n`);
     try {
+        const wrestlersArray: Wrestler[] = [];
         const tableRows = await locator.locator("tbody > tr");
         if ((await tableRows.count()) <= 0) {
             throw new Error("Unable to locate 'tbody > tr'");
@@ -105,6 +73,23 @@ async function scrapeDivisionTable(locator: Locator, division: string, wrestlers
             const tdCount = (await rowTds.count()) ?? 0;
 
             switch (tdCount) {
+                case 3:
+                    // 3 Cells, Rank will say TD, meaning it is the same as previous row's Rank
+                    const tdResult = await rowTds.nth(0);
+                    const tdShikona = await rowTds.nth(1);
+                    const tdRank = wrestlersArray[wrestlersArray.length - 1].current_rank;
+                    const tdWrestlerUrl = await tdShikona.locator("a").getAttribute("href");
+                    const tdWrestlerId = parseWrestlerIdFromUrl(tdWrestlerUrl ?? "");
+                    const tdWrestler = new Wrestler();
+                    tdWrestler.wrestler_id = await parseInt(tdWrestlerId);
+                    tdWrestler.name = (await tdShikona.textContent()) ?? "";
+                    tdWrestler.current_basho_record = (await tdResult.textContent())?.split(" ")[0];
+                    tdWrestler.current_rank = tdRank ?? "";
+                    tdWrestler.current_division = division;
+
+                    wrestlersArray.push(tdWrestler);
+                    console.log(`${tdWrestler.wrestler_id}: ${tdWrestler.name} added! 🙆‍♂️`);
+                    break;
                 case 4:
                     console.log(`Found single wrestler in row ${i} 🐒`);
                     let singleShikona = await currRow.locator(".shikona");
@@ -137,7 +122,7 @@ async function scrapeDivisionTable(locator: Locator, division: string, wrestlers
                     const wrestler1Url = await shikona1.locator("a").getAttribute("href");
                     const wrestler1Id = parseWrestlerIdFromUrl(wrestler1Url ?? "");
 
-                    const rank = await rowTds.nth(2);
+                    const doubleRank = await rowTds.nth(2);
 
                     const result2 = await rowTds.nth(4);
                     const shikona2 = await rowTds.nth(3);
@@ -148,7 +133,7 @@ async function scrapeDivisionTable(locator: Locator, division: string, wrestlers
                     wrestler1.wrestler_id = await parseInt(wrestler1Id);
                     wrestler1.name = (await shikona1.textContent()) ?? "";
                     wrestler1.current_basho_record = (await result1.textContent())?.split(" ")[0];
-                    wrestler1.current_rank = (await rank.textContent()) ?? "";
+                    wrestler1.current_rank = (await doubleRank.textContent()) ?? "";
                     wrestler1.current_division = division;
                     wrestlersArray.push(wrestler1);
                     console.log(`${wrestler1.wrestler_id}: ${wrestler1.name} added! 🙆‍♂️`);
@@ -157,7 +142,7 @@ async function scrapeDivisionTable(locator: Locator, division: string, wrestlers
                     wrestler2.wrestler_id = await parseInt(wrestler2Id);
                     wrestler2.name = (await shikona2.textContent()) ?? "";
                     wrestler2.current_basho_record = (await result2.textContent())?.split(" ")[0];
-                    wrestler2.current_rank = (await rank.textContent()) ?? "";
+                    wrestler2.current_rank = (await doubleRank.textContent()) ?? "";
                     wrestler2.current_division = division;
                     wrestlersArray.push(wrestler2);
                     console.log(`${wrestler2.wrestler_id}: ${wrestler2.name} added! 🙆‍♂️`);
@@ -166,49 +151,57 @@ async function scrapeDivisionTable(locator: Locator, division: string, wrestlers
                     throw new Error(`Invalid tdCount ${tdCount}. Check to ensure code is correct!`);
             }
         }
+        return wrestlersArray;
     } catch (error) {
-        throw new Error(`Error scraping ${division} division table!`);
+        throw new Error(`Error scraping ${division} division table! ${error}`);
     }
 }
 
-async function scrapeBashoDetails(page: Page, basho: Basho) {
-    let locator = await page.locator("h1");
-    if ((await locator.count()) <= 0) {
-        throw new Error("Unable to locate 'h1'");
+async function scrapeBashoDetails(page: Page) {
+    try {
+        let locator = await page.locator("h1");
+        if ((await locator.count()) <= 0) {
+            throw new Error("Unable to locate 'h1'");
+        }
+        await locator.nth(0).highlight();
+        const bashoName = (await locator.nth(0).textContent()) ?? "";
+
+        locator = await page.locator("h2");
+        if ((await locator.count()) <= 0) {
+            throw new Error("Unable to locate 'h2'");
+        }
+        await locator.nth(0).highlight();
+        const titleData = await locator.nth(0).textContent();
+        const cityVenue = titleData?.split(", ") || [];
+
+        locator = await page.locator("h3");
+        if ((await locator.count()) <= 0) {
+            throw new Error("Unable to locate 'h3'");
+        }
+
+        await locator.nth(0).highlight();
+        const stringDates = await locator.nth(0).textContent();
+        const dates = stringDates?.split(" - ") ?? [];
+
+        locator = await page.locator("td[style*='white-space:nowrap;'] > a").first();
+        const bashoIdUrl = await locator.getAttribute("href");
+        const bashoId = parseBashoIdFromUrl(bashoIdUrl ?? "");
+
+        const basho: Basho = new Basho();
+        basho.bashoId = parseInt(bashoId);
+        basho.bashoName = bashoName;
+        basho.venue = cityVenue[1];
+        basho.city = cityVenue[0];
+        basho.startDate = new Date(dates[0]);
+        basho.endDate = new Date(dates[1]);
+        return basho;
+    } catch (error) {
+        throw new Error(`Error scraping for Basho Details! ${error}`);
     }
-    await locator.nth(0).highlight();
-    const bashoName = (await locator.nth(0).textContent()) ?? "";
-
-    locator = await page.locator("h2");
-    if ((await locator.count()) <= 0) {
-        throw new Error("Unable to locate 'h2'");
-    }
-    await locator.nth(0).highlight();
-    let titleData = await locator.nth(0).textContent();
-    let cityVenue = titleData?.split(", ") || [];
-
-    locator = await page.locator("h3");
-    if ((await locator.count()) <= 0) {
-        throw new Error("Unable to locate 'h3'");
-    }
-
-    await locator.nth(0).highlight();
-    let stringDates = await locator.nth(0).textContent();
-    let dates = stringDates?.split(" - ") ?? [];
-
-    locator = await page.locator("td[style*='white-space:nowrap;'] > a").first();
-    const bashoIdUrl = await locator.getAttribute("href");
-    const bashoId = parseBashoIdFromUrl(bashoIdUrl ?? "");
-
-    basho.bashoId = parseInt(bashoId);
-    basho.bashoName = bashoName;
-    basho.venue = cityVenue[1];
-    basho.city = cityVenue[0];
-    basho.startDate = new Date(dates[0]);
-    basho.endDate = new Date(dates[1]);
 }
+//#endregion
 
-(async function scrapeBanzuke() {
+export async function ScrapeBashoPage() {
     const browser = await chromium.launch({ headless: false });
     try {
         const context = await browser.newContext();
@@ -220,18 +213,31 @@ async function scrapeBashoDetails(page: Page, basho: Basho) {
         await page.goto(url);
 
         console.log("Getting Basho Details... 👹");
-        let basho: Basho = new Basho();
-        await scrapeBashoDetails(page, basho);
+
+        const basho = await scrapeBashoDetails(page);
         fs.writeFile(`./.temp/${basho.bashoName}.txt`, basho.toString(), (err) => {
             if (err) console.log(err);
         });
 
         console.log("Getting Banzuke Details for Makuuchi/Juryo...👺");
-        await scrapeBanzukeByDivision(page, basho);
+        const divisionsList = await scrapeBanzukeByDivision(page);
+
+        for (let i = 0; i < DivisionCount; i++) {
+            const division = Divisions[i];
+            fs.writeFile(`./.temp/${basho.bashoName}-${division}.txt`, "", (err) => {
+                if (err) console.log(err);
+            });
+            for (let wrestler of divisionsList[i]) {
+                fs.appendFile(`./.temp/${basho.bashoName}-${division}.txt`, `${wrestler.toString()}\n`, (err) => {
+                    if (err) console.log(err);
+                });
+            }
+        }
     } catch (error) {
         console.log("⚠️ Uh Oh! There was an error! ⚠️");
         console.log(error);
     } finally {
         await browser.close();
+        // await cleanup("./.temp/");
     }
-})();
+}
