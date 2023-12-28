@@ -1,10 +1,7 @@
 import { Locator, Page, chromium } from "playwright";
 import * as fs from "fs";
 import * as path from "path";
-import Basho from "../models/Basho";
-import Wrestler from "../models/Wrestler";
-import Divisions from "../constants/Divisions";
-
+import { Wrestler, Divisions, Basho } from "@babagee654/sumo-data-models";
 const DivisionCount = Divisions.length;
 
 //#region Helper Functions
@@ -238,6 +235,6 @@ export async function ScrapeBashoPage() {
         console.log(error);
     } finally {
         await browser.close();
-        // await cleanup("./.temp/");
+        await cleanup("./.temp/");
     }
 }
