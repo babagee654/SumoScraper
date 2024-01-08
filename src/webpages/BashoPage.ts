@@ -1,8 +1,8 @@
 import { Locator, Page, chromium } from "playwright";
-import * as fs from "fs";
-import * as path from "path";
+import fs from "fs";
+import path from "path";
 import { Wrestler, Divisions, Basho } from "@babagee654/sumo-data-models";
-const DivisionCount = Divisions.length;
+const DivisionCount = Object.keys(Divisions).length;
 
 //#region Helper Functions
 function cleanup(directoryPath: string) {
@@ -44,7 +44,7 @@ async function scrapeBanzukeByDivision(page: Page) {
         }
         const divisionsList: Wrestler[][] = [];
         for (let i = 0; i < DivisionCount; i++) {
-            const division = Divisions[i];
+            const division = Object.keys(Divisions)[i];
             const wrestlerList: Wrestler[] = await scrapeDivisionTable(await locator.nth(i), division);
             console.log(`Found ${wrestlerList.length} wrestlers in ${division} division!`);
             divisionsList.push(wrestlerList);
@@ -215,12 +215,13 @@ export async function ScrapeBashoPage() {
         fs.writeFile(`./.temp/${basho.bashoName}.txt`, basho.toString(), (err) => {
             if (err) console.log(err);
         });
+        console.log(`${basho.bashoName} Saved! 🙆‍♂️`);
 
         console.log("Getting Banzuke Details for Makuuchi/Juryo...👺");
         const divisionsList = await scrapeBanzukeByDivision(page);
 
         for (let i = 0; i < DivisionCount; i++) {
-            const division = Divisions[i];
+            const division = Object.keys(Divisions)[i];
             fs.writeFile(`./.temp/${basho.bashoName}-${division}.txt`, "", (err) => {
                 if (err) console.log(err);
             });
@@ -235,6 +236,6 @@ export async function ScrapeBashoPage() {
         console.log(error);
     } finally {
         await browser.close();
-        await cleanup("./.temp/");
+        // await cleanup("./.temp/");
     }
 }

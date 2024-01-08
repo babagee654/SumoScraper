@@ -16,7 +16,9 @@
         "winston": "^3.11.0"
     },
     "dependencies": {
-        "@babagee654/sumo-data-models": "^1.0.0",
-        "fs": "^0.0.1-security"
+        "@babagee654/sumo-data-models": "^1.0.7",
+        "@types/node": "^20.10.6",
+        "fs": "^0.0.1-security",
+        "path": "^0.12.7"
     }
 }

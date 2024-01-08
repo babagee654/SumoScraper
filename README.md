@@ -19,3 +19,7 @@ Simply run the following script
 ```
 npm start
 ```
+
+## Scraper Notes
+
+-   Jan 2 2024, Hatsu Basho updated with latest banzuke, and Basho details
