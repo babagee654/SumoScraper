@@ -1,10 +1,13 @@
 {
     "compilerOptions": {
-        "target": "ES2020",
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "outDir": "./dist",
-        "rootDir": "./src",
-        "sourceMap": true
-    }
+        "target": "ES2020", // or a target that suits your environment
+        "module": "CommonJS", // Node.js uses CommonJS, this will compile your ES Modules to CommonJS
+        "moduleResolution": "node", // to work with Node.js module resolution algorithm
+        "esModuleInterop": true, // enables default imports from modules with no default export
+        "outDir": "./dist", // output directory for your compiled JavaScript files
+        "rootDir": "./src", // root directory of your source files
+        "sourceMap": true // generates corresponding '.map' file for debugging
+    },
+    "include": ["src/**/*.ts"], // specifies the TypeScript files to be included
+    "exclude": ["node_modules"] // excludes the node_modules directory
 }

@@ -10,6 +10,7 @@ Install dependencies
 npm install
 npx playwright install
 npx playwright install-deps
+npm run build
 ```
 
 ## Usage
@@ -17,7 +18,7 @@ npx playwright install-deps
 Simply run the following script
 
 ```
-npm start
+npm start:prod
 ```
 
 ## Scraper Notes

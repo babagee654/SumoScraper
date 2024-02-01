@@ -2,41 +2,12 @@ import { Locator, Page, chromium } from "playwright";
 import fs from "fs";
 import path from "path";
 import { Wrestler, Divisions, Basho } from "@babagee654/sumo-data-models";
+import { Logger } from "winston";
 const DivisionCount = Object.keys(Divisions).length;
-
-//#region Helper Functions
-function cleanup(directoryPath: string) {
-    fs.readdir(directoryPath, (err, files) => {
-        if (err) throw err;
-
-        for (const file of files) {
-            fs.unlink(path.join(directoryPath, file), (err) => {
-                if (err) throw err;
-            });
-        }
-    });
-}
-
-function parseWrestlerIdFromUrl(url: string) {
-    const rQueryIndex = url.indexOf("r=");
-    if (!rQueryIndex) {
-        throw new Error(`Unable to parse for WrestlerId from URL, ${url}`);
-    }
-    const wrestlerId = url.slice(rQueryIndex + 2);
-    return wrestlerId;
-}
-function parseBashoIdFromUrl(url: string) {
-    const bQueryIndex = url.indexOf("b=");
-    if (!bQueryIndex) {
-        throw new Error(`Unable to parse for BashoId from URL, ${url}`);
-    }
-    const bashoId = url.slice(bQueryIndex + 2);
-    return bashoId;
-}
-//#endregion
+import { cleanup, parseWrestlerIdFromUrl, parseBashoIdFromUrl } from "../helpers/BashoHelpers";
 
 //#region Scraper Functions
-async function scrapeBanzukeByDivision(page: Page) {
+async function scrapeBanzukeByDivision(page: Page, logger: Logger) {
     try {
         let locator = await page.locator(".banzuke");
         if ((await locator.count()) <= 0) {
@@ -45,8 +16,8 @@ async function scrapeBanzukeByDivision(page: Page) {
         const divisionsList: Wrestler[][] = [];
         for (let i = 0; i < DivisionCount; i++) {
             const division = Object.keys(Divisions)[i];
-            const wrestlerList: Wrestler[] = await scrapeDivisionTable(await locator.nth(i), division);
-            console.log(`Found ${wrestlerList.length} wrestlers in ${division} division!`);
+            const wrestlerList: Wrestler[] = await scrapeDivisionTable(await locator.nth(i), division, logger);
+            logger.info(`Found ${wrestlerList.length} wrestlers in ${division} division!`);
             divisionsList.push(wrestlerList);
         }
         return divisionsList;
@@ -55,8 +26,8 @@ async function scrapeBanzukeByDivision(page: Page) {
     }
 }
 
-async function scrapeDivisionTable(locator: Locator, division: string) {
-    console.log(`\n--------Scraping ${division} Table--------\n`);
+async function scrapeDivisionTable(locator: Locator, division: string, logger: Logger) {
+    logger.info(`\n--------Scraping ${division} Table--------\n`);
     try {
         const wrestlersArray: Wrestler[] = [];
         const tableRows = await locator.locator("tbody > tr");
@@ -85,10 +56,10 @@ async function scrapeDivisionTable(locator: Locator, division: string) {
                     tdWrestler.current_division = division;
 
                     wrestlersArray.push(tdWrestler);
-                    console.log(`${tdWrestler.wrestler_id}: ${tdWrestler.name} added! 🙆‍♂️`);
+                    logger.info(`${tdWrestler.wrestler_id}: ${tdWrestler.name} added! 🙆‍♂️`);
                     break;
                 case 4:
-                    console.log(`Found single wrestler in row ${i} 🐒`);
+                    logger.info(`Found single wrestler in row ${i} 🐒`);
                     let singleShikona = await currRow.locator(".shikona");
                     if ((await singleShikona.count()) <= 0) {
                         singleShikona = await currRow.locator(".debut");
@@ -109,11 +80,11 @@ async function scrapeDivisionTable(locator: Locator, division: string) {
                     singleFoundWrestler.current_division = division;
 
                     wrestlersArray.push(singleFoundWrestler);
-                    console.log(`${singleFoundWrestler.wrestler_id}: ${singleFoundWrestler.name} added! 🙆‍♂️`);
+                    logger.info(`${singleFoundWrestler.wrestler_id}: ${singleFoundWrestler.name} added! 🙆‍♂️`);
 
                     break;
                 case 5:
-                    console.log(`Found two wrestlers in row ${i} 🐒🐒`);
+                    logger.info(`Found two wrestlers in row ${i} 🐒🐒`);
                     const result1 = await rowTds.nth(0);
                     const shikona1 = await rowTds.nth(1);
                     const wrestler1Url = await shikona1.locator("a").getAttribute("href");
@@ -133,7 +104,7 @@ async function scrapeDivisionTable(locator: Locator, division: string) {
                     wrestler1.current_rank = (await doubleRank.textContent()) ?? "";
                     wrestler1.current_division = division;
                     wrestlersArray.push(wrestler1);
-                    console.log(`${wrestler1.wrestler_id}: ${wrestler1.name} added! 🙆‍♂️`);
+                    logger.info(`${wrestler1.wrestler_id}: ${wrestler1.name} added! 🙆‍♂️`);
 
                     const wrestler2 = new Wrestler();
                     wrestler2.wrestler_id = await parseInt(wrestler2Id);
@@ -142,7 +113,7 @@ async function scrapeDivisionTable(locator: Locator, division: string) {
                     wrestler2.current_rank = (await doubleRank.textContent()) ?? "";
                     wrestler2.current_division = division;
                     wrestlersArray.push(wrestler2);
-                    console.log(`${wrestler2.wrestler_id}: ${wrestler2.name} added! 🙆‍♂️`);
+                    logger.info(`${wrestler2.wrestler_id}: ${wrestler2.name} added! 🙆‍♂️`);
                     break;
                 default:
                     throw new Error(`Invalid tdCount ${tdCount}. Check to ensure code is correct!`);
@@ -191,6 +162,7 @@ async function scrapeBashoDetails(page: Page) {
         basho.city = cityVenue[0];
         basho.startDate = new Date(dates[0]);
         basho.endDate = new Date(dates[1]);
+
         return basho;
     } catch (error) {
         throw new Error(`Error scraping for Basho Details! ${error}`);
@@ -198,42 +170,42 @@ async function scrapeBashoDetails(page: Page) {
 }
 //#endregion
 
-export async function ScrapeBashoPage() {
+export async function ScrapeBashoPage(logger: Logger) {
     const browser = await chromium.launch({ headless: false });
     try {
         const context = await browser.newContext();
         const page = await context.newPage();
         const url = "https://sumodb.sumogames.de/Banzuke.aspx";
 
-        console.log("Scraping Banzuke Page...");
+        logger.info("Scraping Banzuke Page...");
 
         await page.goto(url);
 
-        console.log("Getting Basho Details... 👹");
+        logger.info("Getting Basho Details... 👹");
 
         const basho = await scrapeBashoDetails(page);
         fs.writeFile(`./.temp/${basho.bashoName}.txt`, basho.toString(), (err) => {
-            if (err) console.log(err);
+            if (err) logger.error(err);
         });
-        console.log(`${basho.bashoName} Saved! 🙆‍♂️`);
+        logger.info(`${basho.bashoName} Saved! 🙆‍♂️`);
 
-        console.log("Getting Banzuke Details for Makuuchi/Juryo...👺");
-        const divisionsList = await scrapeBanzukeByDivision(page);
+        logger.info("Getting Banzuke Details for Makuuchi/Juryo...👺");
+        const divisionsList = await scrapeBanzukeByDivision(page, logger);
 
         for (let i = 0; i < DivisionCount; i++) {
             const division = Object.keys(Divisions)[i];
             fs.writeFile(`./.temp/${basho.bashoName}-${division}.txt`, "", (err) => {
-                if (err) console.log(err);
+                if (err) logger.error(err);
             });
             for (let wrestler of divisionsList[i]) {
                 fs.appendFile(`./.temp/${basho.bashoName}-${division}.txt`, `${wrestler.toString()}\n`, (err) => {
-                    if (err) console.log(err);
+                    if (err) logger.error(err);
                 });
             }
         }
     } catch (error) {
-        console.log("⚠️ Uh Oh! There was an error! ⚠️");
-        console.log(error);
+        logger.warn("⚠️ Uh Oh! There was an error! ⚠️");
+        logger.error(error);
     } finally {
         await browser.close();
         // await cleanup("./.temp/");

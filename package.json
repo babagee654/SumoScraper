@@ -4,21 +4,23 @@
     "description": "",
     "main": "index.ts",
     "scripts": {
-        "start": "ts-node src/index.ts"
+        "start": "ts-node src/index.ts",
+        "build": "tsc",
+        "start:prod": "node dist/index.js"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "playwright": "^1.40.1",
         "ts-node": "^10.9.2",
-        "typescript": "^5.3.3",
-        "winston": "^3.11.0"
+        "typescript": "^5.3.3"
     },
     "dependencies": {
         "@babagee654/sumo-data-models": "^1.0.7",
         "@types/node": "^20.10.6",
         "fs": "^0.0.1-security",
-        "path": "^0.12.7"
+        "path": "^0.12.7",
+        "playwright": "^1.41.1",
+        "winston": "^3.11.0"
     }
 }
