@@ -1,7 +1,7 @@
 {
-    "name": "playwright_practice",
+    "name": "sumo-scraper",
     "version": "1.0.0",
-    "description": "",
+    "description": "Webscraper for SumoSaltyBet",
     "main": "index.ts",
     "scripts": {
         "start": "ts-node src/index.ts",
@@ -9,14 +9,14 @@
         "start:prod": "node dist/index.js"
     },
     "keywords": [],
-    "author": "",
+    "author": "Jerome Acosta",
     "license": "ISC",
     "devDependencies": {
         "ts-node": "^10.9.2",
         "typescript": "^5.3.3"
     },
     "dependencies": {
-        "@babagee654/sumo-data-models": "^1.0.10",
+        "@babagee654/sumo-data-models": "^1.0.11",
         "@types/node": "^20.10.6",
         "fs": "^0.0.1-security",
         "path": "^0.12.7",

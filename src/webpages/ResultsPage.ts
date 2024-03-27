@@ -115,10 +115,10 @@ async function scrapeWrestlerDetailsInMatchup(logger: Logger, locator: Locator, 
         // font nth(0) is the rank, nth(1) is the record
         const wrestlerRank = await locator.locator("font").nth(0).textContent();
         // removing east/west from rank
-        wrestler.current_rank = rankStringCleanup(wrestlerRank);
+        wrestler.currentRank = rankStringCleanup(wrestlerRank);
 
         const wrestlerRecord = await locator.locator("center > a").nth(1);
-        wrestler.current_basho_record = await wrestlerRecord.textContent();
+        wrestler.currentBashoRecord = await wrestlerRecord.textContent();
 
         return wrestler;
     } catch (error) {

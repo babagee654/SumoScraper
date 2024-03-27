@@ -44,15 +44,15 @@ async function scrapeDivisionTable(locator: Locator, division: string, logger: L
                     // 3 Cells, Rank will say TD, meaning it is the same as previous row's Rank
                     const tdResult = await rowTds.nth(0);
                     const tdShikona = await rowTds.nth(1);
-                    const tdRank = wrestlersArray[wrestlersArray.length - 1].current_rank;
+                    const tdRank = wrestlersArray[wrestlersArray.length - 1].currentRank;
                     const tdWrestlerUrl = await tdShikona.locator("a").getAttribute("href");
                     const tdWrestlerId = parseWrestlerIdFromUrl(tdWrestlerUrl ?? "");
                     const tdWrestler = new Wrestler();
                     tdWrestler.wrestlerId = await parseInt(tdWrestlerId);
                     tdWrestler.name = (await tdShikona.textContent()) ?? "";
-                    tdWrestler.current_basho_record = (await tdResult.textContent())?.split(" ")[0];
-                    tdWrestler.current_rank = tdRank ?? "";
-                    tdWrestler.current_division = division;
+                    tdWrestler.currentBashoRecord = (await tdResult.textContent())?.split(" ")[0];
+                    tdWrestler.currentRank = tdRank ?? "";
+                    tdWrestler.currentDivision = division;
 
                     wrestlersArray.push(tdWrestler);
                     logger.info(`${tdWrestler.wrestlerId}: ${tdWrestler.name} added! 🙆‍♂️`);
@@ -71,9 +71,9 @@ async function scrapeDivisionTable(locator: Locator, division: string, logger: L
                     const singleFoundWrestler = new Wrestler();
                     singleFoundWrestler.wrestlerId = await parseInt(singleWrestlerId);
                     singleFoundWrestler.name = (await singleShikona.textContent()) ?? "";
-                    singleFoundWrestler.current_basho_record = (await singleResult.textContent())?.split(" ")[0];
-                    singleFoundWrestler.current_rank = (await singleRank.textContent()) ?? "";
-                    singleFoundWrestler.current_division = division;
+                    singleFoundWrestler.currentBashoRecord = (await singleResult.textContent())?.split(" ")[0];
+                    singleFoundWrestler.currentRank = (await singleRank.textContent()) ?? "";
+                    singleFoundWrestler.currentDivision = division;
 
                     wrestlersArray.push(singleFoundWrestler);
                     logger.info(`${singleFoundWrestler.wrestlerId}: ${singleFoundWrestler.name} added! 🙆‍♂️`);
@@ -96,18 +96,18 @@ async function scrapeDivisionTable(locator: Locator, division: string, logger: L
                     const wrestler1 = new Wrestler();
                     wrestler1.wrestlerId = await parseInt(wrestler1Id);
                     wrestler1.name = (await shikona1.textContent()) ?? "";
-                    wrestler1.current_basho_record = (await result1.textContent())?.split(" ")[0];
-                    wrestler1.current_rank = (await doubleRank.textContent()) ?? "";
-                    wrestler1.current_division = division;
+                    wrestler1.currentBashoRecord = (await result1.textContent())?.split(" ")[0];
+                    wrestler1.currentRank = (await doubleRank.textContent()) ?? "";
+                    wrestler1.currentDivision = division;
                     wrestlersArray.push(wrestler1);
                     logger.info(`${wrestler1.wrestlerId}: ${wrestler1.name} added! 🙆‍♂️`);
 
                     const wrestler2 = new Wrestler();
                     wrestler2.wrestlerId = await parseInt(wrestler2Id);
                     wrestler2.name = (await shikona2.textContent()) ?? "";
-                    wrestler2.current_basho_record = (await result2.textContent())?.split(" ")[0];
-                    wrestler2.current_rank = (await doubleRank.textContent()) ?? "";
-                    wrestler2.current_division = division;
+                    wrestler2.currentBashoRecord = (await result2.textContent())?.split(" ")[0];
+                    wrestler2.currentRank = (await doubleRank.textContent()) ?? "";
+                    wrestler2.currentDivision = division;
                     wrestlersArray.push(wrestler2);
                     logger.info(`${wrestler2.wrestlerId}: ${wrestler2.name} added! 🙆‍♂️`);
                     break;

@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@babagee654/sumo-data-models@^1.0.10":
-  version "1.0.10"
-  resolved "https://npm.pkg.github.com/download/@babagee654/sumo-data-models/1.0.10/474de4ed35bf236b7c4d1295f2ca5f4c8091d922"
-  integrity sha512-jjhJAgRezl5qwU71MqP3K35qRFpNRsaTfw21ywvDAMY/QJXiwhrMEbLCCY1PPQEX8reUCmArVypcfDTK5e8ihg==
+"@babagee654/sumo-data-models@^1.0.11":
+  version "1.0.11"
+  resolved "https://npm.pkg.github.com/download/@babagee654/sumo-data-models/1.0.11/bc2a26df84cb3d78af18a865f2b13f036dde9b81"
+  integrity sha512-hJEZQ/EIbgNra5LBinhPz7Ngwu06J9dzvzxKo0Xv8SR0RrBp2Yeko9D18MLXQsvjHn5YoTZE36fnbRS7oqUlkQ==
   dependencies:
     ts-node "^10.9.2"
     tsc "^2.0.4"
