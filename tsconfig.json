@@ -6,7 +6,8 @@
         "esModuleInterop": true, // enables default imports from modules with no default export
         "outDir": "./dist", // output directory for your compiled JavaScript files
         "rootDir": "./src", // root directory of your source files
-        "sourceMap": true // generates corresponding '.map' file for debugging
+        "sourceMap": true, // generates corresponding '.map' file for debugging
+        "resolveJsonModule": true
     },
     "include": ["src/**/*.ts"], // specifies the TypeScript files to be included
     "exclude": ["node_modules"] // excludes the node_modules directory
